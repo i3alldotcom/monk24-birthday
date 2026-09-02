@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ส่งคำมุทิตา</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:-apple-system,"Noto Sans Thai","Sarabun",sans-serif;
+       background:#F5F1E8;color:#3A3226;padding:18px;line-height:1.65}
+  .card{background:#fff;border-radius:16px;padding:20px;
+        box-shadow:0 2px 12px rgba(0,0,0,.07);margin-bottom:16px}
+  h1{font-size:19px;margin:0 0 4px;color:#8B6F2F}
+  .sub{font-size:13px;color:#8A8070;margin-bottom:16px}
+  pre{white-space:pre-wrap;word-wrap:break-word;font-family:inherit;
+      font-size:16px;margin:0;background:#FAF7F0;border-radius:12px;
+      padding:16px;border:1px solid #EDE5D5}
+  button{width:100%;border:0;border-radius:14px;padding:16px;
+         font-size:17px;font-weight:700;font-family:inherit;
+         cursor:pointer;margin-top:12px}
+  .primary{background:#06C755;color:#fff}
+  .primary:active{background:#05a847}
+  .ghost{background:#fff;color:#5A5040;border:1.5px solid #DDD3C0}
+  .status{text-align:center;font-size:14px;margin-top:14px;min-height:22px}
+  .ok{color:#06C755;font-weight:700}
+  .err{color:#D9534F}
+  .loading{text-align:center;padding:50px 0;color:#8A8070}
+  #uid{font-size:11px;color:#B5AC9A;word-break:break-all;
+       text-align:center;margin-top:22px}
+</style>
+</head>
+<body>
+
+<div id="loading" class="loading">⏳ กำลังโหลด…</div>
+
+<div id="app" style="display:none">
+  <div class="card">
+    <h1>🪷 คำมุทิตาวันนี้</h1>
+    <div class="sub" id="today"></div>
+    <pre id="msg"></pre>
+  </div>
+
+  <button class="primary" onclick="share()">📤 เลือกกลุ่มแล้วส่ง</button>
+  <button class="ghost"  onclick="copyMsg()">📋 คัดลอกข้อความ</button>
+  <div class="status" id="status"></div>
+  <div id="uid"></div>
+</div>
+
+<script>
+// ══════ ⚙️ แก้ 2 บรรทัดนี้ ══════
+const LIFF_ID = "2001234567-AbCdEfGh";   // ← LIFF ID ของคุณ
+const GAS_URL = "";                       // ← ใส่ทีหลัง (PART 4 ขั้นสุดท้าย)
+// ═══════════════════════════════
+
+let messageText = "";
+
+// ── ถอดรหัส base64url → ข้อความไทย ──
+function b64urlDecode(s){
+  s = s.replace(/-/g,'+').replace(/_/g,'/');
+  while (s.length % 4) s += '=';
+  const bin = atob(s);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
+async function main(){
+  try {
+    await liff.init({ liffId: LIFF_ID });
+
+    if (!liff.isLoggedIn()) { liff.login(); return; }
+
+    // แสดง userId (ไว้คัดลอกไปใส่ Apps Script ครั้งแรก)
+    try {
+      const p = await liff.getProfile();
+      document.getElementById('uid').textContent = 'UID: ' + p.userId;
+    } catch(e){}
+
+    // 1) ลองอ่านข้อความจาก URL ก่อน (?m=...)
+    const m = new URLSearchParams(location.search).get('m');
+    if (m) {
+      messageText = b64urlDecode(m);
+    }
+    // 2) ถ้าไม่มี ให้ดึงสดจาก Apps Script
+    else if (GAS_URL) {
+      const r = await fetch(GAS_URL + '?action=today');
+      const j = await r.json();
+      messageText = j.message || '';
+    }
+
+    if (!messageText) messageText = '— วันนี้ไม่มีวันคล้ายวันเกิดครับ —';
+
+    document.getElementById('msg').textContent = messageText;
+    document.getElementById('today').textContent =
+      new Date().toLocaleDateString('th-TH',
+        { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+
+  } catch (err) {
+    document.getElementById('loading').innerHTML =
+      '<span class="err">❌ เริ่มระบบไม่สำเร็จ<br>' + err.message + '</span>';
+  }
+}
+
+function setStatus(t, cls){
+  const el = document.getElementById('status');
+  el.textContent = t;
+  el.className = 'status ' + (cls || '');
+}
+
+async function share(){
+  if (!liff.isApiAvailable('shareTargetPicker')) {
+    setStatus('⚠️ ต้องเปิดจากในแอป LINE เท่านั้น', 'err');
+    return;
+  }
+  try {
+    const res = await liff.shareTargetPicker(
+      [{ type: 'text', text: messageText }],
+      { isMultiple: true }
+    );
+    if (res) setStatus('✅ ส่งเรียบร้อยแล้ว สาธุ 🙏', 'ok');
+    else     setStatus('ยกเลิกการส่ง');
+  } catch (e) {
+    setStatus('❌ ส่งไม่สำเร็จ: ' + e.message, 'err');
+  }
+}
+
+function copyMsg(){
+  navigator.clipboard.writeText(messageText)
+    .then(() => setStatus('📋 คัดลอกแล้ว', 'ok'))
+    .catch(() => setStatus('คัดลอกไม่สำเร็จ', 'err'));
+}
+
+main();
+</script>
+</body>
+</html>
