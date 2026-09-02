@@ -286,25 +286,39 @@
   }
 
   document.getElementById('shareBtn').addEventListener('click', async () => {
-    burstConfetti();
+  if (!liff.isApiAvailable('shareTargetPicker')) {
+    alert('กรุณาเปิดผ่านแอป LINE');
+    return;
+  }
 
-    if (typeof liff === 'undefined' || !liff.isInClient || !liff.isInClient()) {
-      alert('กรุณาเปิดลิงก์นี้ผ่านแอป LINE เพื่อใช้ปุ่มแชร์');
-      return;
+  // --- เริ่มต้นส่วนที่ต้องแก้ไข ---
+  await liff.shareTargetPicker([{
+    type: 'flex',
+    altText: 'สุขสันต์วันเกิด ' + nickName + '!',
+    contents: {
+      type: "bubble",
+      hero: {
+        type: "image",
+        url: "https://scdn.line-apps.com/n/channel_devcenter/img/fx/01_2_restaurant.png", 
+        size: "full",
+        aspectRatio: "20:13",
+        aspectMode: "cover"
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          { type: "text", text: "HAPPY BIRTHDAY!", weight: "bold", size: "xl", color: "#FF6B6B", align: "center" },
+          { type: "text", text: "คุณ " + nickName, size: "lg", align: "center", margin: "md", weight: "bold" },
+          { type: "separator", margin: "xxl" },
+          { type: "text", text: "ขอให้ปีนี้เป็นปีที่ยอดเยี่ยม มีแต่ความสุข สมหวังในทุกเรื่องที่ตั้งใจไว้ครับ 🎂🎉", wrap: true, margin: "xxl", size: "sm", align: "center" }
+        ]
+      }
+      // ถ้ามี footer ก็ใส่ต่อท้ายได้เลยครับ
     }
-    if (!liff.isApiAvailable('shareTargetPicker')) {
-      alert('อุปกรณ์นี้ยังไม่รองรับการแชร์การ์ดนี้');
-      return;
-    }
-    try {
-      await liff.shareTargetPicker([{
-        type: 'text',
-        text: `🎉 สุขสันต์วันเกิดครับ คุณ${nickName}\n${wishFor(nickName)}`
-      }]);
-    } catch (e) {
-      console.error('shareTargetPicker error:', e);
-    }
-  });
+  }]);
+  // --- สิ้นสุดส่วนที่แก้ไข ---
+});
 
   main();
 </script>
