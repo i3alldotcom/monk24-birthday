@@ -1,4 +1,4 @@
-a<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -18,6 +18,7 @@ a<!DOCTYPE html>
     --flame:    #f0a83c;
     --flame-2:  #e2632f;
     --ribbon:   #c14a5c;
+    --muted:    #7a6a4c;
   }
 
   *{ box-sizing:border-box; }
@@ -127,11 +128,11 @@ a<!DOCTYPE html>
   .kicker{
     font-size:14px;
     letter-spacing:.02em;
-    color:#7a6a4c;
+    color:var(--muted);
     margin:0 0 6px;
   }
 
-  #cardName{
+  #cardName, #listCount{
     font-family:'Chonburi', serif;
     font-size: clamp(28px, 8vw, 36px);
     line-height:1.25;
@@ -140,13 +141,56 @@ a<!DOCTYPE html>
     word-break: break-word;
   }
 
-  #cardMsg{
+  #cardMsg, #listMsg{
     font-size:16px;
     line-height:1.8;
     color:var(--ink);
     margin: 0 0 30px;
     padding: 0 4px;
   }
+
+  /* ---------- multi-person list mode ---------- */
+  .list-wrap{
+    position:relative;
+    margin: 0 0 22px;
+  }
+
+  .name-list{
+    max-height: 236px;
+    overflow-y: auto;
+    text-align:left;
+    padding: 2px 8px 2px 2px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--paper-2) transparent;
+  }
+  .name-list::-webkit-scrollbar{ width:5px; }
+  .name-list::-webkit-scrollbar-thumb{ background: var(--paper-2); border-radius:4px; }
+
+  .name-row{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    padding: 9px 2px;
+    border-bottom: 1px dashed rgba(22,48,44,0.14);
+    font-size:15px;
+    line-height:1.4;
+  }
+  .name-row:last-child{ border-bottom:none; }
+  .name-row .dot{ flex:0 0 auto; font-size:13px; }
+  .name-row .n{ flex:1 1 auto; min-width:0; word-break:break-word; color:var(--ink); }
+
+  /* บอกใบ้ว่ายังเลื่อนดูต่อได้ — โชว์เฉพาะตอนรายชื่อยาวเกินกล่อง (toggled by JS) */
+  .list-wrap::after{
+    content:"";
+    position:absolute;
+    left:0; right:6px; bottom:0;
+    height:0;
+    background: linear-gradient(to bottom, rgba(250,243,226,0) 0%, var(--paper) 85%);
+    pointer-events:none;
+    transition: height .2s ease;
+  }
+  .list-wrap.has-more::after{ height:28px; }
 
   #shareBtn{
     appearance:none;
@@ -189,6 +233,7 @@ a<!DOCTYPE html>
 
   @media (max-width:340px){
     .card{ padding: 40px 20px 28px; }
+    .name-list{ max-height:200px; }
   }
 </style>
 </head>
@@ -211,33 +256,86 @@ a<!DOCTYPE html>
 
     <div class="card">
       <div class="eyebrow-line"></div>
-      <p class="kicker">การ์ดอวยพรวันเกิด</p>
-      <h1 id="cardName">หลวงพี่</h1>
-      <p id="cardMsg">กำลังเตรียมคำอวยพร…</p>
+
+      <!-- โหมดคนเดียว — เปิดจากปุ่ม "เปิดการ์ด" ของแต่ละคน -->
+      <div id="singleView">
+        <p class="kicker">การ์ดอวยพรวันเกิด</p>
+        <h1 id="cardName">ท่าน</h1>
+        <p id="cardMsg">กำลังเตรียมคำอวยพร…</p>
+      </div>
+
+      <!-- โหมดรายชื่อรวม — เปิดจากปุ่ม "ดูรายชื่อทั้งหมด" ในการ์ดสรุป -->
+      <div id="listView" style="display:none;">
+        <p class="kicker">วันนี้มีวันเกิด</p>
+        <h1 id="listCount">0 ท่าน</h1>
+        <div class="list-wrap" id="listWrap">
+          <div class="name-list" id="nameList"></div>
+        </div>
+        <p id="listMsg">ขอให้ทุกท่านมีความสุขมาก ๆ ในวันพิเศษนี้นะครับ 🎉🎂</p>
+      </div>
+
       <button id="shareBtn" type="button">💌 แชร์การ์ดนี้</button>
       <p class="hint">กดปุ่มด้านบนเพื่อส่งคำอวยพรต่อในแชท</p>
     </div>
   </div>
 
 <script>
-  const LIFF_ID = '2011371216-mdsClEqy'; // TODO: ใส่ LIFF ID จริงตรงนี้ (ต้องตรงกับ Code.gs)
+  const LIFF_ID = '2011371216-mdsClEqy';
 
   /* ── อ่านค่าจาก URL — วางระดับบนสุด ไม่ต้องรอ liff.init() ── */
-  const params   = new URLSearchParams(location.search);
-  const nickName = params.get('name') || 'ท่าน';
+  const params     = new URLSearchParams(location.search);
+  const namesParam = params.get('names');           // โหมดรายชื่อรวม
+  const isListMode = !!namesParam;
+
+  const nickName = params.get('name') || 'ท่าน';    // โหมดคนเดียว
   const fullName = params.get('full') || nickName;
+
+  const nameList = isListMode
+    ? namesParam.split('|').map(function (s) { return decodeURIComponent(s); }).filter(Boolean)
+    : [];
 
   const wishFor = (name) =>
     `ขอให้คุณ${name} มีความสุขมาก ๆ ในวันพิเศษนี้นะครับ สุขภาพแข็งแรง ` +
     `สมหวังในทุกเรื่องที่ตั้งใจ 🎂🎉`;
 
-  function render() {
+  function renderSingle() {
     document.getElementById('cardName').textContent = fullName;
     document.getElementById('cardMsg').textContent  = wishFor(nickName);
   }
 
+  function renderList() {
+    document.getElementById('singleView').style.display = 'none';
+    document.getElementById('listView').style.display   = 'block';
+    document.getElementById('listCount').textContent = nameList.length + ' ท่าน';
+
+    const box = document.getElementById('nameList');
+    box.innerHTML = '';
+    nameList.forEach(function (n) {
+      const row = document.createElement('div');
+      row.className = 'name-row';
+
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.textContent = '🎈';
+
+      const label = document.createElement('span');
+      label.className = 'n';
+      label.textContent = n;
+
+      row.appendChild(dot);
+      row.appendChild(label);
+      box.appendChild(row);
+    });
+
+    // โชว์ fade บอกใบ้ให้เลื่อนดูต่อ เฉพาะตอนรายชื่อยาวเกินกล่อง — ไม่ให้การ์ดล้น
+    requestAnimationFrame(function () {
+      const wrap = document.getElementById('listWrap');
+      if (box.scrollHeight > box.clientHeight + 4) wrap.classList.add('has-more');
+    });
+  }
+
   // แสดงข้อความได้ทันทีจาก query string โดยไม่ต้องรอ LIFF
-  render();
+  if (isListMode) { renderList(); } else { renderSingle(); }
 
   async function main() {
     try {
@@ -273,7 +371,7 @@ a<!DOCTYPE html>
       el.style.top  = originY + 'px';
       el.style.background = colors[i % colors.length];
       el.style.transform = `rotate(${Math.random()*360}deg)`;
-      el.style.transition = `transform ${700 + Math.random()*400}ms ease-out, opacity ${900}ms ease-out`;
+      el.style.transition = `transform ${700 + Math.random()*400}ms ease-out, opacity 900ms ease-out`;
       wrap.appendChild(el);
 
       requestAnimationFrame(() => {
@@ -286,39 +384,55 @@ a<!DOCTYPE html>
   }
 
   document.getElementById('shareBtn').addEventListener('click', async () => {
-  if (!liff.isApiAvailable('shareTargetPicker')) {
-    alert('กรุณาเปิดผ่านแอป LINE');
-    return;
-  }
+    burstConfetti();
 
-  // --- เริ่มต้นส่วนที่ต้องแก้ไข ---
-  await liff.shareTargetPicker([{
-    type: 'flex',
-    altText: 'สุขสันต์วันเกิด ' + nickName + '!',
-    contents: {
-      type: "bubble",
-      hero: {
-        type: "image",
-        url: "https://i3alldotcom.github.io/monk24-birthday/hbd24.png", 
-        size: "full",
-        aspectRatio: "940:788", // ปรับให้ตรงกับขนาดพิกเซลจริงของรูป
-        aspectMode: "cover"
-      },
-      body: {
-        type: "box",
-        layout: "vertical",
-        contents: [
-          { type: "text", text: "มุทิตาจิตเนื่องในวันเกิด!", weight: "bold", size: "xl", color: "#FF6B6B", align: "center" },
-          { type: "text", text: "แด่ " + nickName, size: "lg", align: "center", margin: "md", weight: "bold" },
-          { type: "separator", margin: "xxl" },
-          { type: "text", text: "ขอให้มีความสุข สมหวัง แข็งแรง เข้าถึงธรรมนะครับ 🎂🎉", wrap: true, margin: "xxl", size: "sm", align: "center" }
-        ]
-      }
-      // ถ้ามี footer ก็ใส่ต่อท้ายได้เลยครับ
+    if (typeof liff === 'undefined' || !liff.isInClient || !liff.isInClient()) {
+      alert('กรุณาเปิดลิงก์นี้ผ่านแอป LINE เพื่อใช้ปุ่มแชร์');
+      return;
     }
-  }]);
-  // --- สิ้นสุดส่วนที่แก้ไข ---
-});
+    if (!liff.isApiAvailable('shareTargetPicker')) {
+      alert('อุปกรณ์นี้ยังไม่รองรับการแชร์การ์ดนี้');
+      return;
+    }
+
+    try {
+      if (isListMode) {
+        // โหมดรายชื่อรวม — แชร์เป็นข้อความสรุปสั้น ๆ (รายชื่อยาวเกิน 12 คนจะย่อไว้)
+        const preview = nameList.slice(0, 12).join(', ') + (nameList.length > 12 ? ' และคนอื่น ๆ' : '');
+        await liff.shareTargetPicker([{
+          type: 'text',
+          text: `🎉 วันนี้มีวันเกิด ${nameList.length} ท่าน: ${preview}\nขอให้ทุกท่านมีความสุขมาก ๆ นะครับ 🎂`
+        }]);
+      } else {
+        await liff.shareTargetPicker([{
+          type: 'flex',
+          altText: 'สุขสันต์วันเกิด ' + nickName + '!',
+          contents: {
+            type: 'bubble',
+            hero: {
+              type: 'image',
+              url: 'https://i3alldotcom.github.io/monk24-birthday/hbd24.png',
+              size: 'full',
+              aspectRatio: '940:788',
+              aspectMode: 'cover'
+            },
+            body: {
+              type: 'box',
+              layout: 'vertical',
+              contents: [
+                { type: 'text', text: 'มุทิตาจิตเนื่องในวันเกิด!', weight: 'bold', size: 'xl', color: '#FF6B6B', align: 'center' },
+                { type: 'text', text: 'แด่ ' + nickName, size: 'lg', align: 'center', margin: 'md', weight: 'bold' },
+                { type: 'separator', margin: 'xxl' },
+                { type: 'text', text: 'ขอให้มีความสุข สมหวัง แข็งแรง เข้าถึงธรรมนะครับ 🎂🎉', wrap: true, margin: 'xxl', size: 'sm', align: 'center' }
+              ]
+            }
+          }
+        }]);
+      }
+    } catch (e) {
+      console.error('shareTargetPicker error:', e);
+    }
+  });
 
   main();
 </script>
