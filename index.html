@@ -2,326 +2,345 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>ส่งคำมุทิตา</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Chonburi&family=Mitr:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>การ์ดอวยพรวันเกิด</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
-  :root{
-    --ink:      #16302c;
-    --paper:    #faf3e2;
-    --paper-2:  #f2e8cf;
-    --night:    #0e2e30;
-    --night-2:  #143f3f;
-    --flame:    #f0a83c;
-    --flame-2:  #e2632f;
-    --ribbon:   #c14a5c;
-  }
+:root{
+  --pink:#FF6B9D; --deep:#C9184A; --soft:#FFF0F5;
+  --text:#3D2C3A; --sub:#8A7480; --line:#F3DCE5;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:'Prompt',-apple-system,sans-serif;
+  background:linear-gradient(160deg,#FFD6E8 0%,#FFF0F5 45%,#FFE9D6 100%);
+  min-height:100vh;min-height:100dvh;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px 16px;color:var(--text);
+}
 
-  *{ box-sizing:border-box; }
+/* ---------- CARD ---------- */
+.card{
+  width:100%;max-width:400px;background:#fff;border-radius:26px;
+  box-shadow:0 18px 50px rgba(201,24,74,.16);
+  overflow:hidden;animation:pop .5s cubic-bezier(.2,.8,.3,1.2);
+}
+@keyframes pop{from{opacity:0;transform:translateY(24px) scale(.96)}to{opacity:1;transform:none}}
 
-  html,body{
-    margin:0;
-    height:100%;
-    background: radial-gradient(120% 90% at 50% 18%, var(--night-2) 0%, var(--night) 62%, #081c1d 100%);
-    font-family:'Mitr', sans-serif;
-    color:var(--ink);
-    -webkit-font-smoothing:antialiased;
-    overflow-x:hidden;
-  }
+.card-head{
+  background:linear-gradient(135deg,var(--pink),var(--deep));
+  color:#fff;padding:26px 22px 22px;text-align:center;position:relative;
+}
+.card-head::after{
+  content:'';position:absolute;left:0;right:0;bottom:-1px;height:18px;
+  background:#fff;border-radius:20px 20px 0 0;
+}
+.cake{font-size:44px;line-height:1;animation:bounce 2s ease-in-out infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.kicker{font-size:11px;letter-spacing:3px;opacity:.9;margin-top:8px;font-weight:600}
+.headline{font-size:22px;font-weight:700;margin-top:2px}
+.count-badge{
+  display:inline-block;margin-top:10px;padding:4px 14px;border-radius:999px;
+  background:rgba(255,255,255,.22);font-size:12px;font-weight:600;
+}
 
-  body{
-    min-height:100%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding: 40px 20px 56px;
-  }
+.card-body{padding:20px 20px 8px}
 
-  /* soft candle glow drifting behind the card */
-  .glow{
-    position:fixed;
-    top:8%;
-    left:50%;
-    width:340px;
-    height:340px;
-    transform:translateX(-50%);
-    background: radial-gradient(circle, rgba(240,168,60,0.35) 0%, rgba(240,168,60,0) 70%);
-    filter: blur(4px);
-    pointer-events:none;
-    animation: drift 7s ease-in-out infinite;
-  }
-  @keyframes drift{
-    0%,100%{ opacity:.75; transform:translateX(-50%) translateY(0); }
-    50%{ opacity:1; transform:translateX(-48%) translateY(10px); }
-  }
+/* ---------- NAME LIST (จุดกันล้น) ---------- */
+.name-wrap{position:relative}
+.name-list{
+  display:flex;flex-direction:column;gap:9px;
+  max-height:38vh;overflow-y:auto;overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;padding:2px 6px 2px 2px;
+}
+.name-list::-webkit-scrollbar{width:5px}
+.name-list::-webkit-scrollbar-track{background:transparent}
+.name-list::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px}
+.name-list{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 
-  .stage{
-    position:relative;
-    width:100%;
-    max-width:380px;
-  }
+/* fade ขอบล่างบอกว่ายังเลื่อนได้ */
+.name-wrap.scrollable::after{
+  content:'';position:absolute;left:0;right:0;bottom:0;height:34px;
+  background:linear-gradient(transparent,#fff 85%);pointer-events:none;border-radius:0 0 14px 14px;
+}
 
-  /* ---------- candle ---------- */
-  .candle{
-    position:relative;
-    width:100%;
-    display:flex;
-    justify-content:center;
-    margin-bottom:-18px;
-    z-index:2;
-  }
-  .candle svg{ width:56px; height:auto; }
-  .flame{
-    transform-origin: 50% 100%;
-    animation: flicker 2.6s ease-in-out infinite;
-  }
-  @keyframes flicker{
-    0%,100%{ transform: scaleY(1) scaleX(1) rotate(0deg); }
-    30%{ transform: scaleY(1.08) scaleX(0.94) rotate(-2deg); }
-    55%{ transform: scaleY(0.94) scaleX(1.05) rotate(2deg); }
-    80%{ transform: scaleY(1.05) scaleX(0.97) rotate(-1deg); }
-  }
+.name-item{
+  display:flex;align-items:center;gap:11px;
+  padding:11px 14px;border-radius:15px;
+  background:var(--soft);border:1px solid var(--line);
+  animation:slide .35s backwards;
+}
+@keyframes slide{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+.name-item .no{
+  flex:0 0 24px;height:24px;border-radius:50%;
+  background:var(--pink);color:#fff;font-size:11px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+}
+.name-item .txt{flex:1;min-width:0}
+.name-item .nick{
+  font-size:16px;font-weight:600;color:var(--deep);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.name-item .full{
+  font-size:11px;color:var(--sub);margin-top:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
 
-  /* ---------- card ---------- */
-  .card{
-    position:relative;
-    background: var(--paper);
-    border-radius: 6px 6px 46px 6px;
-    padding: 46px 30px 34px;
-    box-shadow:
-      0 30px 60px -20px rgba(0,0,0,0.55),
-      0 2px 0 rgba(255,255,255,0.4) inset;
-    text-align:center;
-    z-index:1;
-    opacity:0;
-    transform: translateY(14px);
-    animation: rise .7s .15s cubic-bezier(.2,.8,.2,1) forwards;
-  }
-  @keyframes rise{
-    to{ opacity:1; transform:translateY(0); }
-  }
+/* ---- โหมดคนเดียว: โชว์ใหญ่กลางการ์ด ---- */
+.name-list.is-single{gap:0;max-height:none;overflow:visible}
+.name-list.is-single .name-item{
+  flex-direction:column;text-align:center;gap:4px;padding:22px 16px;background:transparent;border:none;
+}
+.name-list.is-single .no{display:none}
+.name-list.is-single .nick{font-size:30px;line-height:1.25;white-space:normal}
+.name-list.is-single .full{font-size:13px;white-space:normal}
 
-  /* folded-corner detail, ties to the card's cut corner */
-  .card::after{
-    content:"";
-    position:absolute;
-    right:0;
-    bottom:0;
-    width:46px;
-    height:46px;
-    background: linear-gradient(135deg, transparent 50%, var(--paper-2) 50%);
-    border-radius: 0 0 46px 0;
-  }
+/* ---- 2 คอลัมน์เมื่อคนเยอะ ---- */
+.name-list.is-many{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:44vh;
+}
+.name-list.is-many .name-item{padding:9px 10px;gap:8px}
+.name-list.is-many .nick{font-size:13px}
+.name-list.is-many .full{font-size:10px}
+@media (max-width:340px){ .name-list.is-many{grid-template-columns:1fr} }
 
-  .eyebrow-line{
-    width:34px;
-    height:2px;
-    background:var(--flame-2);
-    margin: 0 auto 16px;
-    border-radius:2px;
-  }
+.wish{
+  text-align:center;font-size:13px;color:var(--sub);
+  line-height:1.75;padding:16px 6px 4px;
+}
+.date{
+  text-align:center;font-size:11px;color:var(--sub);
+  padding-bottom:14px;letter-spacing:.5px;
+}
 
-  .kicker{
-    font-size:14px;
-    letter-spacing:.02em;
-    color:#7a6a4c;
-    margin:0 0 6px;
-  }
+/* ---------- ACTIONS ---------- */
+.actions{padding:4px 20px 22px;display:flex;flex-direction:column;gap:9px}
+.btn{
+  border:none;border-radius:14px;padding:14px;font-family:inherit;
+  font-size:15px;font-weight:600;cursor:pointer;transition:transform .12s,opacity .2s;
+}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(135deg,var(--pink),var(--deep));color:#fff;
+  box-shadow:0 8px 20px rgba(201,24,74,.28)}
+.btn-ghost{background:#fff;color:var(--sub);border:1px solid var(--line)}
+.btn[disabled]{opacity:.5;pointer-events:none}
 
-  #cardName{
-    font-family:'Chonburi', serif;
-    font-size: clamp(28px, 8vw, 36px);
-    line-height:1.25;
-    margin: 0 0 18px;
-    color: var(--ribbon);
-    word-break: break-word;
-  }
+.toast{
+  position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);
+  background:rgba(61,44,58,.94);color:#fff;padding:11px 20px;border-radius:999px;
+  font-size:13px;opacity:0;transition:.28s;pointer-events:none;z-index:99;
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
 
-  #cardMsg{
-    font-size:16px;
-    line-height:1.8;
-    color:var(--ink);
-    margin: 0 0 30px;
-    padding: 0 4px;
-  }
-
-  #shareBtn{
-    appearance:none;
-    border:none;
-    cursor:pointer;
-    background: var(--ribbon);
-    color:#fff8ee;
-    font-family:'Mitr', sans-serif;
-    font-weight:500;
-    font-size:16px;
-    padding: 14px 30px;
-    border-radius: 999px;
-    box-shadow: 0 10px 22px -8px rgba(193,74,92,0.65);
-    transition: transform .15s ease, box-shadow .15s ease;
-  }
-  #shareBtn:active{
-    transform: translateY(1px) scale(.98);
-    box-shadow: 0 6px 14px -6px rgba(193,74,92,0.6);
-  }
-
-  .hint{
-    margin-top:16px;
-    font-size:12.5px;
-    color:#c9c2ad;
-  }
-
-  /* confetti burst on share */
-  .confetti{
-    position:fixed;
-    top:0; left:0;
-    width:0; height:0;
-    pointer-events:none;
-  }
-  .confetti span{
-    position:absolute;
-    width:7px; height:11px;
-    opacity:0;
-    border-radius:1px;
-  }
-
-  @media (max-width:340px){
-    .card{ padding: 40px 20px 28px; }
-  }
+/* confetti */
+.confetti{position:fixed;top:-12px;width:9px;height:9px;opacity:.85;z-index:1;
+  animation:fall linear forwards;pointer-events:none}
+@keyframes fall{to{transform:translateY(105vh) rotate(680deg);opacity:0}}
 </style>
 </head>
 <body>
 
-  <div class="glow"></div>
-
-  <div class="stage">
-    <div class="candle" aria-hidden="true">
-      <svg viewBox="0 0 40 70" xmlns="http://www.w3.org/2000/svg">
-        <rect x="14" y="26" width="12" height="40" rx="2" fill="#f6e7c9"/>
-        <rect x="14" y="26" width="12" height="6" fill="#e8a33d" opacity="0.5"/>
-        <line x1="20" y1="18" x2="20" y2="26" stroke="#5a4326" stroke-width="1.5"/>
-        <g class="flame">
-          <path d="M20 0 C27 9 25 16 20 19 C15 16 13 9 20 0 Z" fill="#f0a83c"/>
-          <path d="M20 6 C24 11 23 15 20 17 C17 15 16 11 20 6 Z" fill="#fdd98a"/>
-        </g>
-      </svg>
-    </div>
-
-    <div class="card">
-      <div class="eyebrow-line"></div>
-      <p class="kicker">การ์ดอวยพรวันเกิด</p>
-      <h1 id="cardName">หลวงพี่</h1>
-      <p id="cardMsg">กำลังเตรียมคำอวยพร…</p>
-      <button id="shareBtn" type="button">💌 แชร์การ์ดนี้</button>
-      <p class="hint">กดปุ่มด้านบนเพื่อส่งคำอวยพรต่อในแชท</p>
-    </div>
+<div class="card" id="card">
+  <div class="card-head">
+    <div class="cake">🎂</div>
+    <div class="kicker">HAPPY BIRTHDAY</div>
+    <div class="headline">สุขสันต์วันเกิด</div>
+    <div class="count-badge" id="countBadge" style="display:none"></div>
   </div>
 
+  <div class="card-body">
+    <div class="name-wrap" id="nameWrap">
+      <div class="name-list" id="nameList"></div>
+    </div>
+    <div class="wish" id="wish"></div>
+    <div class="date" id="dateText"></div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" id="shareBtn">💌 ส่งการ์ดนี้ให้เพื่อน</button>
+    <button class="btn btn-ghost" id="closeBtn">ปิดหน้าต่าง</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script>
-  const LIFF_ID = '2011371216-mdsClEqy'; // TODO: ใส่ LIFF ID จริงตรงนี้ (ต้องตรงกับ Code.gs)
+/* ====== ⚠️ ใส่ LIFF ID ของคุณตรงนี้ ====== */
+const LIFF_ID = '1234567890-abcdefgh';
 
-  /* ── อ่านค่าจาก URL — วางระดับบนสุด ไม่ต้องรอ liff.init() ── */
-  const params   = new URLSearchParams(location.search);
-  const nickName = params.get('name') || 'ท่าน';
-  const fullName = params.get('full') || nickName;
+/* ---------- อ่าน query (รองรับ liff.state) ---------- */
+function getParams(){
+  let qs = location.search;
+  if (!qs || qs.indexOf('names') === -1){
+    const st = new URLSearchParams(location.search).get('liff.state');
+    if (st) qs = st.charAt(0) === '?' ? st : '?' + st;
+  }
+  return new URLSearchParams(qs || '');
+}
+const params = getParams();
 
-  const wishFor = (name) =>
-    `ขอให้คุณ${name} มีความสุขมาก ๆ ในวันพิเศษนี้นะครับ สุขภาพแข็งแรง ` +
-    `สมหวังในทุกเรื่องที่ตั้งใจ 🎂🎉`;
+const nicks = (params.get('names') || params.get('name') || 'เพื่อน')
+                .split('|').map(s => s.trim()).filter(Boolean);
+const fulls = (params.get('fulls') || params.get('full') || '')
+                .split('|').map(s => s.trim()).filter(Boolean);
 
-  function render() {
-    document.getElementById('cardName').textContent = fullName;
-    document.getElementById('cardMsg').textContent  = wishFor(nickName);
+function joinNames(a){
+  if (!a.length) return 'เพื่อน';
+  if (a.length === 1) return a[0];
+  if (a.length <= 3)  return a.slice(0,-1).join(', ') + ' และ ' + a[a.length-1];
+  return a.slice(0,2).join(', ') + ' และอีก ' + (a.length-2) + ' ท่าน';
+}
+const displayName = joinNames(nicks);
+const shareUrl    = location.href;
+
+/* ---------- RENDER ---------- */
+function render(){
+  const list = document.getElementById('nameList');
+  const wrap = document.getElementById('nameWrap');
+
+  if (nicks.length === 1)      list.classList.add('is-single');
+  else if (nicks.length >= 6)  list.classList.add('is-many');
+
+  list.innerHTML = nicks.map(function(n,i){
+    const full = fulls[i] && fulls[i] !== n ? fulls[i] : '';
+    return '<div class="name-item" style="animation-delay:' + (i*0.05) + 's">'
+         +   '<div class="no">' + (i+1) + '</div>'
+         +   '<div class="txt">'
+         +     '<div class="nick">' + esc(n) + '</div>'
+         +     (full ? '<div class="full">' + esc(full) + '</div>' : '')
+         +   '</div>'
+         + '</div>';
+  }).join('');
+
+  if (nicks.length > 1){
+    const b = document.getElementById('countBadge');
+    b.textContent = '🎉 ' + nicks.length + ' ท่าน';
+    b.style.display = 'inline-block';
   }
 
-  // แสดงข้อความได้ทันทีจาก query string โดยไม่ต้องรอ LIFF
-  render();
+  document.getElementById('wish').innerHTML =
+    nicks.length > 1
+      ? 'ขอให้ทุกท่านมีความสุขมาก ๆ<br>สุขภาพแข็งแรง สมหวังทุกสิ่งที่ตั้งใจ ✨'
+      : 'ขอให้มีความสุขมาก ๆ สุขภาพแข็งแรง<br>สมหวังทุกสิ่งที่ตั้งใจนะ ✨';
 
-  async function main() {
-    try {
-      await liff.init({ liffId: LIFF_ID });
-      if (!liff.isLoggedIn()) {
-        liff.login();
-        return;
-      }
-      // เข้าสู่ระบบแล้ว — เนื้อหาแสดงอยู่แล้วจากขั้นตอนด้านบน
-    } catch (e) {
-      console.error('LIFF init error:', e);
-      // ปล่อยให้การ์ดที่ render ไว้แล้วแสดงต่อไป แม้ LIFF จะ init ไม่สำเร็จ
-      // (เช่น เปิดจากเบราว์เซอร์ปกตินอกแอป LINE)
+  document.getElementById('dateText').textContent =
+    new Date().toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
+
+  // เช็กว่าล้นจนต้องเลื่อนไหม → โชว์ fade
+  requestAnimationFrame(function(){
+    if (list.scrollHeight > list.clientHeight + 4) wrap.classList.add('scrollable');
+    list.addEventListener('scroll', function(){
+      const atEnd = list.scrollTop + list.clientHeight >= list.scrollHeight - 6;
+      wrap.classList.toggle('scrollable', !atEnd);
+    });
+  });
+}
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ---------- FLEX ตอนแชร์ ---------- */
+function buildShareFlex(){
+  const rows = nicks.slice(0,8).map(function(n,i){
+    return { type:'box', layout:'baseline', spacing:'sm', contents:[
+      { type:'text', text:'🎈', size:'sm', flex:0 },
+      { type:'text', text:(fulls[i] || n), size:'sm', color:'#3D2C3A', flex:1 }
+    ]};
+  });
+  if (nicks.length > 8){
+    rows.push({ type:'text', text:'…และอีก ' + (nicks.length-8) + ' ท่าน',
+                size:'xs', color:'#8A7480', margin:'sm' });
+  }
+
+  return {
+    type:'flex',
+    altText:'🎂 สุขสันต์วันเกิด ' + displayName,
+    contents:{
+      type:'bubble', size:'mega',
+      header:{ type:'box', layout:'vertical', backgroundColor:'#FF6B9D', paddingAll:'22px',
+        contents:[
+          { type:'text', text:'🎂 HAPPY BIRTHDAY', color:'#FFFFFF', size:'xs',
+            weight:'bold', letterSpacing:'2px' },
+          { type:'text', text:'สุขสันต์วันเกิด', color:'#FFFFFF', size:'xxl',
+            weight:'bold', margin:'sm' },
+          { type:'text', text:displayName, color:'#FFE3EC', size:'sm', margin:'xs', wrap:true }
+        ]},
+      body:{ type:'box', layout:'vertical', spacing:'sm',
+        backgroundColor:'#FFF0F5', paddingAll:'18px', contents:rows },
+      footer:{ type:'box', layout:'vertical', paddingAll:'14px', contents:[
+        { type:'button', style:'primary', height:'sm', color:'#C9184A',
+          action:{ type:'uri', label:'🎁 เปิดการ์ดอวยพร', uri:shareUrl } }
+      ]}
     }
-  }
+  };
+}
 
-  function burstConfetti() {
-    const colors = ['#e8a33d', '#c14a5c', '#3e7a6f', '#f2e8cf'];
-    const wrap = document.createElement('div');
-    wrap.className = 'confetti';
-    document.body.appendChild(wrap);
+/* ---------- LIFF ---------- */
+const shareBtn = document.getElementById('shareBtn');
 
-    const originX = window.innerWidth / 2;
-    const originY = window.innerHeight * 0.55;
-
-    for (let i = 0; i < 26; i++) {
-      const el = document.createElement('span');
-      const angle = Math.random() * Math.PI * 2;
-      const dist  = 60 + Math.random() * 140;
-      const dx = Math.cos(angle) * dist;
-      const dy = Math.sin(angle) * dist - 40;
-      el.style.left = originX + 'px';
-      el.style.top  = originY + 'px';
-      el.style.background = colors[i % colors.length];
-      el.style.transform = `rotate(${Math.random()*360}deg)`;
-      el.style.transition = `transform ${700 + Math.random()*400}ms ease-out, opacity ${900}ms ease-out`;
-      wrap.appendChild(el);
-
-      requestAnimationFrame(() => {
-        el.style.opacity = '1';
-        el.style.transform = `translate(${dx}px, ${dy}px) rotate(${Math.random()*540}deg)`;
-      });
-      setTimeout(() => { el.style.opacity = '0'; }, 550);
+liff.init({ liffId: LIFF_ID })
+  .then(function(){
+    if (!liff.isApiAvailable('shareTargetPicker')){
+      shareBtn.textContent = '📋 คัดลอกลิงก์การ์ด';
     }
-    setTimeout(() => wrap.remove(), 1500);
+  })
+  .catch(function(e){
+    console.error(e);
+    shareBtn.textContent = '📋 คัดลอกลิงก์การ์ด';
+  });
+
+shareBtn.addEventListener('click', function(){
+  shareBtn.disabled = true;
+
+  const fallback = function(){
+    navigator.clipboard.writeText(shareUrl)
+      .then(function(){ toast('คัดลอกลิงก์แล้ว 📋'); })
+      .catch(function(){ toast('คัดลอกไม่สำเร็จ'); })
+      .then(function(){ shareBtn.disabled = false; });
+  };
+
+  if (typeof liff === 'undefined' || !liff.isApiAvailable || !liff.isApiAvailable('shareTargetPicker')){
+    return fallback();
   }
 
-  document.getElementById('shareBtn').addEventListener('click', async () => {
-  if (!liff.isApiAvailable('shareTargetPicker')) {
-    alert('กรุณาเปิดผ่านแอป LINE');
-    return;
-  }
-
-  // --- เริ่มต้นส่วนที่ต้องแก้ไข ---
-  await liff.shareTargetPicker([{
-    type: 'flex',
-    altText: 'สุขสันต์วันเกิด ' + nickName + '!',
-    contents: {
-      type: "bubble",
-      hero: {
-        type: "image",
-        url: "https://i3alldotcom.github.io/monk24-birthday/hbd24.png", 
-        size: "full",
-        aspectRatio: "940:788", // ปรับให้ตรงกับขนาดพิกเซลจริงของรูป
-        aspectMode: "cover"
-      },
-      body: {
-        type: "box",
-        layout: "vertical",
-        contents: [
-          { type: "text", text: "มุทิตาจิตเนื่องในวันเกิด!", weight: "bold", size: "xl", color: "#FF6B6B", align: "center" },
-          { type: "text", text: "แด่ " + nickName, size: "lg", align: "center", margin: "md", weight: "bold" },
-          { type: "separator", margin: "xxl" },
-          { type: "text", text: "ขอให้มีความสุข สมหวัง แข็งแรง เข้าถึงธรรมนะครับ 🎂🎉", wrap: true, margin: "xxl", size: "sm", align: "center" }
-        ]
-      }
-      // ถ้ามี footer ก็ใส่ต่อท้ายได้เลยครับ
-    }
-  }]);
-  // --- สิ้นสุดส่วนที่แก้ไข ---
+  liff.shareTargetPicker([buildShareFlex()])
+    .then(function(res){
+      if (res) { toast('ส่งการ์ดเรียบร้อย 💌'); confetti(); }
+      shareBtn.disabled = false;
+    })
+    .catch(function(err){ console.error(err); fallback(); });
 });
 
-  main();
-</script>
+document.getElementById('closeBtn').addEventListener('click', function(){
+  if (typeof liff !== 'undefined' && liff.isInClient()) liff.closeWindow();
+  else toast('ปิดแท็บนี้ได้เลยครับ');
+});
 
+/* ---------- UI helper ---------- */
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2200);
+}
+
+function confetti(){
+  const colors = ['#FF6B9D','#C9184A','#FFD166','#8AC926','#4CC9F0'];
+  for (let i = 0; i < 45; i++){
+    const d = document.createElement('div');
+    d.className = 'confetti';
+    d.style.left = Math.random()*100 + 'vw';
+    d.style.background = colors[i % colors.length];
+    d.style.animationDuration = (2.2 + Math.random()*1.6) + 's';
+    d.style.animationDelay = (Math.random()*0.5) + 's';
+    if (i % 3 === 0) d.style.borderRadius = '50%';
+    document.body.appendChild(d);
+    setTimeout(function(){ d.remove(); }, 4500);
+  }
+}
+
+render();
+setTimeout(confetti, 350);
+</script>
 </body>
 </html>
