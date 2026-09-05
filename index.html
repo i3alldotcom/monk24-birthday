@@ -290,8 +290,9 @@
   const nickName = params.get('name') || 'ท่าน';    // โหมดคนเดียว
   const fullName = params.get('full') || nickName;
 
+  // URLSearchParams.get() คืนค่าที่ decode ให้แล้วโดยอัตโนมัติ ไม่ต้อง decodeURIComponent ซ้ำ
   const nameList = isListMode
-    ? namesParam.split('|').map(function (s) { return decodeURIComponent(s); }).filter(Boolean)
+    ? namesParam.split('|').map(function (s) { return s.trim(); }).filter(Boolean)
     : [];
 
   const wishFor = (name) =>
@@ -396,43 +397,69 @@
     }
 
     try {
-      if (isListMode) {
-        // โหมดรายชื่อรวม — แชร์เป็นข้อความสรุปสั้น ๆ (รายชื่อยาวเกิน 12 คนจะย่อไว้)
-        const preview = nameList.slice(0, 12).join(', ') + (nameList.length > 12 ? ' และคนอื่น ๆ' : '');
-        await liff.shareTargetPicker([{
-          type: 'text',
-          text: `🎉 วันนี้มีวันเกิด ${nameList.length} ท่าน: ${preview}\nขอให้ทุกท่านมีความสุขมาก ๆ นะครับ 🎂`
-        }]);
-      } else {
-        await liff.shareTargetPicker([{
-          type: 'flex',
-          altText: 'สุขสันต์วันเกิด ' + nickName + '!',
-          contents: {
-            type: 'bubble',
-            hero: {
-              type: 'image',
-              url: 'https://i3alldotcom.github.io/monk24-birthday/hbd24.png',
-              size: 'full',
-              aspectRatio: '940:788',
-              aspectMode: 'cover'
-            },
-            body: {
-              type: 'box',
-              layout: 'vertical',
-              contents: [
-                { type: 'text', text: 'มุทิตาจิตเนื่องในวันเกิด!', weight: 'bold', size: 'xl', color: '#FF6B6B', align: 'center' },
-                { type: 'text', text: 'แด่ ' + nickName, size: 'lg', align: 'center', margin: 'md', weight: 'bold' },
-                { type: 'separator', margin: 'xxl' },
-                { type: 'text', text: 'ขอให้มีความสุข สมหวัง แข็งแรง เข้าถึงธรรมนะครับ 🎂🎉', wrap: true, margin: 'xxl', size: 'sm', align: 'center' }
-              ]
-            }
-          }
-        }]);
-      }
+      await liff.shareTargetPicker([{
+        type: 'flex',
+        altText: isListMode
+          ? ('🎉 วันนี้มีวันเกิด ' + nameList.length + ' ท่าน')
+          : ('สุขสันต์วันเกิด ' + nickName + '!'),
+        contents: buildShareFlexContents()
+      }]);
     } catch (e) {
       console.error('shareTargetPicker error:', e);
     }
   });
+
+  // การ์ด Flex เดียวกับที่ Apps Script ส่งเข้ามา — ใช้ตอนกด "แชร์การ์ดนี้"
+  // รวมทุกชื่อไว้ในบับเบิลเดียว ไม่ว่าจะเปิดจากโหมดคนเดียวหรือโหมดรายชื่อรวม
+  function buildShareFlexContents() {
+    const namesToShow = isListMode ? nameList : [fullName];
+    const MAX_SHOWN = 10;
+    const shown = namesToShow.slice(0, MAX_SHOWN);
+    const remaining = namesToShow.length - shown.length;
+
+    const nameRows = shown.map(function (n) {
+      return {
+        type: 'box',
+        layout: 'baseline',
+        spacing: 'sm',
+        contents: [
+          { type: 'text', text: '🎂', flex: 0, size: 'sm' },
+          { type: 'text', text: n, size: 'sm', wrap: true, flex: 1 }
+        ]
+      };
+    });
+    if (remaining > 0) {
+      nameRows.push({ type: 'text', text: 'และอีก ' + remaining + ' ท่าน', size: 'xs', color: '#8c8c8c', margin: 'md' });
+    }
+
+    const titleLine = namesToShow.length > 1
+      ? 'วันนี้มีวันเกิด ' + namesToShow.length + ' ท่าน'
+      : 'แด่ ' + namesToShow[0];
+
+    return {
+      type: 'bubble',
+      hero: {
+        type: 'image',
+        url: 'https://i3alldotcom.github.io/monk24-birthday/hbd24.png',
+        size: 'full',
+        aspectRatio: '940:788',
+        aspectMode: 'cover'
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'md',
+        contents: [
+          { type: 'text', text: 'มุทิตาจิตเนื่องในวันเกิด!', weight: 'bold', size: 'xl', color: '#FF6B6B', align: 'center' },
+          { type: 'text', text: titleLine, size: 'md', align: 'center', margin: 'md', weight: 'bold' },
+          { type: 'separator', margin: 'lg' },
+          { type: 'box', layout: 'vertical', margin: 'lg', spacing: 'sm', contents: nameRows },
+          { type: 'separator', margin: 'lg' },
+          { type: 'text', text: 'ขอให้มีความสุข สมหวัง แข็งแรง เข้าถึงธรรมนะครับ 🎂🎉', wrap: true, margin: 'lg', size: 'sm', align: 'center' }
+        ]
+      }
+    };
+  }
 
   main();
 </script>
